@@ -51,7 +51,6 @@ def checkHeroes(user):
 
     for hero in response.json()["data"]["heroes"]:
 
-        #print(hero)
         #Ready to Quest
         if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
            ready_to_quest[hero["profession"]].append(int(hero["id"]))
@@ -71,11 +70,17 @@ def checkHeroes(user):
         
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not questing[profession]:
-            startQuest(ready_to_quest[profession], profession)
+            try:
+                startQuest(ready_to_quest[profession], profession)
+            except:
+                print(f"error starting quest with heroes: {ready_to_quest[profession]}, error: {e}")
             
     for profession in done_questing:
         if done_questing[profession]:
-            claimReward(done_questing[profession])
+            try:
+                claimReward(done_questing[profession])
+            except Exception as e:
+                print(f"error claiming quest with heroes: {done_questing[profession]}, error: {e}")
             
     return {
         "ready to quest": ready_to_quest,
