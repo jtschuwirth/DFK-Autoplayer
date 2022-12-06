@@ -67,13 +67,6 @@ def checkHeroes(user):
         #Recharging Stamina
         elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
             recharging[hero["profession"]].append(int(hero["id"]))
-        
-    for profession in ready_to_quest:
-        if ready_to_quest[profession] and not questing[profession]:
-            try:
-                startQuest(ready_to_quest[profession], profession)
-            except:
-                print(f"error starting quest with heroes: {ready_to_quest[profession]}, error: {e}")
             
     for profession in done_questing:
         if done_questing[profession]:
@@ -81,7 +74,15 @@ def checkHeroes(user):
                 claimReward(done_questing[profession])
             except Exception as e:
                 print(f"error claiming quest with heroes: {done_questing[profession]}, error: {e}")
-            
+    
+    for profession in ready_to_quest:
+        if ready_to_quest[profession] and not questing[profession]:
+            try:
+                #startQuest(ready_to_quest[profession][0:5], profession)
+                pass
+            except:
+                print(f"error starting quest with heroes: {ready_to_quest[profession][0:5]}, error: {e}")
+
     return {
         "ready to quest": ready_to_quest,
         "questing": questing, 
