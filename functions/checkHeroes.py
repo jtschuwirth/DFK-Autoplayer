@@ -14,7 +14,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0'
 }
 
-def checkHeroes(user):
+def checkHeroes(user, table):
 
     query = """
         query ($user: String) {
@@ -23,7 +23,9 @@ def checkHeroes(user):
                 profession
                 currentQuest
                 staminaFullAt
-
+                saleAuction {
+    	            id
+    	        }
             }
         }
     """
@@ -48,8 +50,12 @@ def checkHeroes(user):
             "mining":[],
             "fishing":[]
         }
+    auction = []
 
     for hero in response.json()["data"]["heroes"]:
+        if hero["saleAuction"]: 
+            auction.append(int(hero["id"]))
+            continue
 
         #Ready to Quest
         if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
@@ -71,16 +77,16 @@ def checkHeroes(user):
     for profession in done_questing:
         if done_questing[profession]:
             try:
-                claimReward(done_questing[profession])
+                claimReward(done_questing[profession], profession, table)
             except Exception as e:
                 print(f"error claiming quest with heroes: {done_questing[profession]}, error: {e}")
     
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not questing[profession]:
             try:
-                #startQuest(ready_to_quest[profession][0:5], profession)
+                startQuest(ready_to_quest[profession][0:5], profession)
                 pass
-            except:
+            except Exception as e:
                 print(f"error starting quest with heroes: {ready_to_quest[profession][0:5]}, error: {e}")
 
     return {
@@ -88,4 +94,5 @@ def checkHeroes(user):
         "questing": questing, 
         "done_questing": done_questing,
         "recharging": recharging,
+        "auction":auction
         }

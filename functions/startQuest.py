@@ -7,7 +7,10 @@ address = {
 }
 
 def startQuest(heroes, profession):
-    tx = quest_core_contract.functions.multiStartQuest(address[profession], heroes, 5, 0).build_transaction({
+    attempts = 5
+    if profession == "mining":
+        attempts = 25
+    tx = quest_core_contract.functions.startQuest(heroes, address[profession], attempts, 0).build_transaction({
             "from": account.address,
             'nonce': w3.eth.get_transaction_count(account.address)
             })

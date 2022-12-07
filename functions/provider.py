@@ -1,9 +1,8 @@
-from dotenv import load_dotenv
 from web3 import Web3
 import os
-from web3.middleware import geth_poa_middleware
-
+from dotenv import load_dotenv
 load_dotenv()
+from web3.middleware import geth_poa_middleware
 
 
 rpc_url = "https://avax-dfk.gateway.pokt.network/v1/lb/6244818c00b9f0003ad1b619/ext/bc/q2aTwKuyzgs8pynF7UXBZCU7DejbZbZ6EUyHr3JQzYgwNPUPi/rpc"
