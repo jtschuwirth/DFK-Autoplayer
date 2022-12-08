@@ -9,11 +9,13 @@ def claimReward(heroes, profession, table):
     })
 
     signed_tx = w3.eth.account.sign_transaction(tx, account.key)
-    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    hash = w3.toHex(hash)
+
     now = int(datetime.now().timestamp())
     table.put_item(Item={
         "address_": account.address, 
         "date_": now, 
-        "hash_": tx_hash,
+        "hash_": hash,
         "profession_": profession
     })
