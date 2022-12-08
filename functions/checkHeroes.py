@@ -84,10 +84,9 @@ def checkHeroes(user, table):
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not questing[profession]:
             try:
-                startQuest(ready_to_quest[profession][0:5], profession)
-                pass
+                startQuest(ready_to_quest[profession][0:6], profession)
             except Exception as e:
-                print(f"error starting quest with heroes: {ready_to_quest[profession][0:5]}, error: {e}")
+                print(f"error starting quest with heroes: {ready_to_quest[profession][0:6]}, error: {e}")
 
     return {
         "ready to quest": ready_to_quest,
