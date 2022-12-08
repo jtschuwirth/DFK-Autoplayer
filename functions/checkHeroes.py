@@ -64,7 +64,7 @@ def checkHeroes(user, table):
         #Currently Questing
         elif hero["currentQuest"] != ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
             hero_quest = quest_core_contract.functions.getHeroQuest(int(hero["id"])).call()
-            end_time = hero_quest[6]
+            end_time = hero_quest[7]
             if int(end_time) <= int(time.mktime(datetime.now().timetuple())):
                 done_questing[hero["profession"]].append(int(hero["id"]))
             else:
