@@ -56,13 +56,13 @@ def checkHeroes(user, table):
         if hero["saleAuction"]: 
             auction.append(int(hero["id"]))
             continue
-
+        
         #Ready to Quest
         if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
            ready_to_quest[hero["profession"]].append(int(hero["id"]))
         
         #Currently Questing
-        elif hero["currentQuest"] != ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
+        elif hero["currentQuest"] != ZERO_ADDRESS:
             hero_quest = quest_core_contract.functions.getHeroQuest(int(hero["id"])).call()
             end_time = hero_quest[7]
             if int(end_time) <= int(time.mktime(datetime.now().timetuple())):
