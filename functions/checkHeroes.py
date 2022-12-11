@@ -1,9 +1,13 @@
 import requests
 from datetime import datetime
 import time
+
 from functions.startQuest import startQuest
 from functions.claimReward import claimReward
-from functions.QuestCoreV2 import quest_core_contract
+from functions.removeFromAuction import removeFromAuction
+
+from functions.Contracts import quest_core_contract
+from functions.provider import w3, account
 
 ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 graph_url = "https://defi-kingdoms-community-api-gateway-co06z8vi.uc.gateway.dev/graphql"
@@ -15,7 +19,7 @@ headers = {
 }
 
 def checkHeroes(user, table):
-
+    nonce = w3.eth.get_transaction_count(account.address)
     query = """
         query ($user: String) {
             heroes(where: {owner: $user}) {
@@ -54,7 +58,7 @@ def checkHeroes(user, table):
 
     for hero in response.json()["data"]["heroes"]:
         if hero["saleAuction"]: 
-            auction.append(int(hero["id"]))
+            auction.append(hero)
             continue
         
         #Ready to Quest
@@ -73,20 +77,28 @@ def checkHeroes(user, table):
         #Recharging Stamina
         elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
             recharging[hero["profession"]].append(int(hero["id"]))
-            
+    
+    for hero in auction: 
+        if hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
+            removeFromAuction(hero["id"], nonce)
+            nonce+=1
+        
     for profession in done_questing:
         if done_questing[profession]:
             try:
-                claimReward(done_questing[profession], profession, table)
+                claimReward(done_questing[profession], profession, nonce, table)
+                nonce+=1
             except Exception as e:
                 print(f"error claiming quest with heroes: {done_questing[profession]}, error: {e}")
     
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not questing[profession]:
             try:
-                startQuest(ready_to_quest[profession][0:6], profession)
+                startQuest(ready_to_quest[profession][0:6], profession, nonce)
+                nonce+=1
             except Exception as e:
                 print(f"error starting quest with heroes: {ready_to_quest[profession][0:6]}, error: {e}")
+
 
     return {
         "ready to quest": ready_to_quest,
