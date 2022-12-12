@@ -80,13 +80,18 @@ def checkHeroes(user, table):
     
     for hero in auction: 
         if hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
-            removeFromAuction(hero["id"], nonce)
-            nonce+=1
-        
+            try:
+                removeFromAuction(hero["id"], nonce)
+                print(f"Hero: {hero['id']} removed from auction")
+                nonce+=1
+            except Exception as e:
+                print(f"error canceling auction with hero: {hero['id']}, error: {e}")
+
     for profession in done_questing:
         if done_questing[profession]:
             try:
                 claimReward(done_questing[profession], profession, nonce, table)
+                print(f"Heroes: {done_questing[profession]} claimed reward")
                 nonce+=1
             except Exception as e:
                 print(f"error claiming quest with heroes: {done_questing[profession]}, error: {e}")
@@ -95,6 +100,7 @@ def checkHeroes(user, table):
         if ready_to_quest[profession] and not questing[profession]:
             try:
                 startQuest(ready_to_quest[profession][0:6], profession, nonce)
+                print(f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce+=1
             except Exception as e:
                 print(f"error starting quest with heroes: {ready_to_quest[profession][0:6]}, error: {e}")
