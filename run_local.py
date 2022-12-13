@@ -2,7 +2,7 @@ from lambda_function import handler
 
 user = "0x7C50D01C7Ba0EDE836bDA6daC88A952f325756e3"
 
-response = handler({"users": [user]}, "")
+response = handler({"users": [user], "override":{"vitality":[]}}, "")
 
 for i in response[user]:
     if i == "auction": continue

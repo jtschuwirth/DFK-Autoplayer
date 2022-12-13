@@ -13,5 +13,5 @@ table = my_session.resource('dynamodb').Table("dfk-autoplayer")
 
 def handler(event, context):
     for user in event["users"]:
-        users[user] = checkHeroes(user, table)
+        users[user] = checkHeroes(user, event["override"],table)
     return users
