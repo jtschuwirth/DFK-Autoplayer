@@ -1,7 +1,7 @@
 from functions.Contracts import hero_sale_contract
-from functions.provider import w3, account
+from functions.provider import w3
 
-def removeFromAuction(heroId, nonce):
+def removeFromAuction(heroId, account, nonce):
     tx = hero_sale_contract.functions.cancelAuction(int(heroId)).build_transaction({
         "from": account.address,
         'nonce': nonce

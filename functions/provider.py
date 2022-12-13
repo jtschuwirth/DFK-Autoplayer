@@ -10,4 +10,5 @@ w3 = Web3(Web3.HTTPProvider(rpc_url))
 w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 w3.clientVersion
 
-account = w3.eth.account.from_key(os.environ.get("PRIVATE_KEY"))
+def get_account(address):
+    return w3.eth.account.from_key(os.environ.get(address))

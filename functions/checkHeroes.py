@@ -7,7 +7,7 @@ from functions.claimReward import claimReward
 from functions.removeFromAuction import removeFromAuction
 
 from functions.Contracts import quest_core_contract
-from functions.provider import w3, account
+from functions.provider import w3, get_account
 
 ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 graph_url = "https://defi-kingdoms-community-api-gateway-co06z8vi.uc.gateway.dev/graphql"
@@ -20,6 +20,7 @@ headers = {
 
 
 def checkHeroes(user, override, table):
+    account = get_account(user)
     nonce = w3.eth.get_transaction_count(account.address)
     query = """
         query ($user: String) {
@@ -98,7 +99,7 @@ def checkHeroes(user, override, table):
     for hero in auction:
         if hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
             try:
-                removeFromAuction(hero["id"], nonce)
+                removeFromAuction(hero["id"], account, nonce)
                 print(f"Hero: {hero['id']} removed from auction")
                 nonce += 1
             except Exception as e:
@@ -109,7 +110,7 @@ def checkHeroes(user, override, table):
         if done_questing[profession]:
             try:
                 claimReward(done_questing[profession],
-                            profession, nonce, table)
+                            profession, account, nonce, table)
                 print(f"Heroes: {done_questing[profession]} claimed reward")
                 nonce += 1
             except Exception as e:
@@ -119,7 +120,7 @@ def checkHeroes(user, override, table):
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not questing[profession]:
             try:
-                startQuest(ready_to_quest[profession][0:6], profession, nonce)
+                startQuest(ready_to_quest[profession][0:6], profession, account, nonce)
                 print(
                     f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce += 1

@@ -1,5 +1,5 @@
 from functions.Contracts import quest_core_contract
-from functions.provider import w3, account
+from functions.provider import w3
 
 address = {
     "mining": "0x75912145f5cFEfb980616FA47B2f103210FaAb94",
@@ -8,7 +8,7 @@ address = {
     "vitality": "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d"
 }
 
-def startQuest(heroes, profession, nonce):
+def startQuest(heroes, profession, account, nonce):
     attempts = 5
     if profession == "mining": attempts = 25
     tx = quest_core_contract.functions.startQuest(heroes, address[profession], attempts, 0).build_transaction({

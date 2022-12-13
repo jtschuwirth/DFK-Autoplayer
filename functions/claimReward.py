@@ -1,8 +1,8 @@
 from functions.Contracts import quest_core_contract
-from functions.provider import w3, account
+from functions.provider import w3
 from datetime import datetime
 
-def claimReward(heroes, profession, nonce, table):
+def claimReward(heroes, profession, account, nonce, table):
     tx = quest_core_contract.functions.completeQuest(heroes[0]).build_transaction({
         "from": account.address,
         'nonce': nonce
