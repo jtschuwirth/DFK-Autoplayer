@@ -1,7 +1,6 @@
 import requests
 from datetime import datetime
 import time
-import boto3
 
 from functions.startQuest import startQuest
 from functions.claimReward import claimReward
@@ -83,7 +82,7 @@ def checkHeroes(user, table):
         if "Item" in hero_setting:
             if "override_" in hero_setting["Item"]:
                 override = hero_setting["Item"]["override_"]
-            if "levelUp_" in hero_setting["item"]:
+            if "levelUp_" in hero_setting["Item"]:
                 level_up = hero_setting["Item"]["levelUp_"]
             if level_up:
                 stats = {
@@ -102,7 +101,7 @@ def checkHeroes(user, table):
 
         # Ready to Quest
         if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
-            if not override:
+            if override:
                 ready_to_quest[address_from_quest[override]].append(hero)
             elif address_from_quest[hero["profession"]] in ready_to_quest:
                 ready_to_quest[address_from_quest[hero["profession"]]].append(
@@ -159,8 +158,8 @@ def checkHeroes(user, table):
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not profession in questing:
             try:
-                # startQuest(ready_to_quest[profession]
-                # [0: 6], profession, account, nonce)
+                startQuest(ready_to_quest[profession]
+                    [0: 6], profession, account, nonce)
                 print(
                     f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce += 1
