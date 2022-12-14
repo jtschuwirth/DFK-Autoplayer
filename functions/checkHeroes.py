@@ -100,7 +100,7 @@ def checkHeroes(user, table):
                     f"error canceling auction with hero: {hero['id']}, error: {e}")
 
         # Ready to Quest
-        if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
+        if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple()))+60*200:
             if override:
                 ready_to_quest[address_from_quest[override]].append(hero)
             elif address_from_quest[hero["profession"]] in ready_to_quest:
@@ -135,7 +135,7 @@ def checkHeroes(user, table):
 
         # Recharging Stamina
         elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
-            if level_up and (hero["xp"] % 1000 == 0 and hero["xp"] != 0):
+            if level_up and (hero["xp"] % 1000 == 0 and hero["xp"] != 0) and hero["level"]<6:
                 try:
                     levelUpHero(int(hero["id"]),
                                 stats, account, nonce)

@@ -2,8 +2,8 @@ from functions.Contracts import quest_core_contract
 from functions.provider import w3
 
 def startQuest(heroes, profession, account, nonce):
-    attempts = 5
-    if profession == "mining": attempts = 25
+    attempts = 3
+    if profession == "mining": attempts = 15
     tx = quest_core_contract.functions.startQuest(heroes, profession, attempts, 0).build_transaction({
             "from": account.address,
             'nonce': nonce
