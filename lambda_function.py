@@ -9,9 +9,9 @@ my_session = boto3.session.Session(
         aws_secret_access_key=os.environ.get("SECRET_KEY"),
         region_name = "us-east-1",
     )
-table = my_session.resource('dynamodb').Table("dfk-autoplayer")
+table = my_session.resource('dynamodb').Table("dfk-autoplayer-heroes")
 
 def handler(event, context):
     for user in event["users"]:
-        users[user] = checkHeroes(user, event["override"],table)
+        users[user] = checkHeroes(user, table)
     return users

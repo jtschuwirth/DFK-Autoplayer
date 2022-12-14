@@ -1,10 +1,12 @@
 import requests
 from datetime import datetime
 import time
+import boto3
 
 from functions.startQuest import startQuest
 from functions.claimReward import claimReward
 from functions.removeFromAuction import removeFromAuction
+from functions.Meditation import levelUpHero, completeMeditation
 
 from functions.Contracts import quest_core_contract
 from functions.provider import w3, get_account
@@ -18,14 +20,30 @@ headers = {
     'User-Agent': 'Mozilla/5.0'
 }
 
+# quest_from_address = {
+#    "0x75912145f5cFEfb980616FA47B2f103210FaAb94": "mining",
+#    "0x407ab39B3675f29A719476af6eb3B9E5d93969E6": "fishing",
+#    "0xAd51199B453075C73FA106aFcAAD59f705EF7872": "foraging",
+#    "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d": "vitality"
+# }
 
-def checkHeroes(user, override, table):
+address_from_quest = {
+    "mining": "0x75912145f5cFEfb980616FA47B2f103210FaAb94",
+    "fishing": "0x407ab39B3675f29A719476af6eb3B9E5d93969E6",
+    "foraging": "0xAd51199B453075C73FA106aFcAAD59f705EF7872",
+    "vitality": "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d"
+}
+
+
+def checkHeroes(user, table):
     account = get_account(user)
     nonce = w3.eth.get_transaction_count(account.address)
     query = """
         query ($user: String) {
             heroes(where: {owner: $user}) {
                 id
+                xp
+                level
                 profession
                 currentQuest
                 staminaFullAt
@@ -41,76 +59,97 @@ def checkHeroes(user, override, table):
 
     response = requests.post(
         graph_url, json={"query": query, "variables": variables}, headers=headers)
+
     ready_to_quest = {
-        "mining": [],
-        "fishing": [],
-        "foraging": [],
-        "vitality": []
     }
     questing = {
-        "mining": [],
-        "fishing": [],
-        "foraging": [],
-        "vitality": []
     }
     done_questing = {
-        "mining": [],
-        "fishing": [],
-        "foraging": [],
-        "vitality": []
     }
+
     recharging = {
         "mining": [],
         "fishing": [],
         "foraging": [],
         "vitality": []
     }
-    auction = []
 
     for hero in response.json()["data"]["heroes"]:
-        if hero["saleAuction"]:
-            auction.append(hero)
-            continue
-
-        # Ready to Quest
-        if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
-            overrided = False
-            for training_quest in override:
-                if hero["id"] in override[training_quest]:
-                    ready_to_quest[training_quest].append(hero)
-                    overrided = True
-                    break
-            if not overrided: ready_to_quest[hero["profession"]].append(int(hero["id"]))
-
-        # Currently Questing
-        elif hero["currentQuest"] != ZERO_ADDRESS:
-            hero_quest = quest_core_contract.functions.getHeroQuest(
-                int(hero["id"])).call()
-            end_time = hero_quest[7]
-            if int(end_time) <= int(time.mktime(datetime.now().timetuple())):
-                done_questing[hero["profession"]].append(int(hero["id"]))
-            else:
-                questing[hero["profession"]].append(int(hero["id"]))
-
-        # Recharging Stamina
-        elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
-            recharging[hero["profession"]].append(int(hero["id"]))
-
-    for hero in auction:
-        if hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
+        hero_setting = table.get_item(
+            Key={"heroId_": int(hero["id"]), "owner_": user})
+        override = False
+        level_up = False
+        stats = {}
+        if "Item" in hero_setting:
+            if "override_" in hero_setting["Item"]:
+                override = hero_setting["Item"]["override_"]
+            if "levelUp_" in hero_setting["item"]:
+                level_up = hero_setting["Item"]["levelUp_"]
+            if level_up:
+                stats = {
+                    "primaryStat": hero_setting["Item"]["primaryStat_"],
+                    "secondarStat": hero_setting["Item"]["secondaryStat_"],
+                    "tertiaryStat": hero_setting["Item"]["tertiaryStat_"]
+                }
+        if hero["saleAuction"] and hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
             try:
-                removeFromAuction(hero["id"], account, nonce)
+                removeFromAuction(int(hero["id"]), account, nonce)
                 print(f"Hero: {hero['id']} removed from auction")
                 nonce += 1
             except Exception as e:
                 print(
                     f"error canceling auction with hero: {hero['id']}, error: {e}")
 
+        # Ready to Quest
+        if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
+            if not override:
+                ready_to_quest[address_from_quest[override]].append(hero)
+            elif address_from_quest[hero["profession"]] in ready_to_quest:
+                ready_to_quest[address_from_quest[hero["profession"]]].append(
+                    int(hero["id"]))
+            else:
+                ready_to_quest[address_from_quest[hero["profession"]]] = [
+                    int(hero["id"])]
+
+        # Currently Questing
+        elif hero["currentQuest"] != ZERO_ADDRESS:
+            if hero["currentQuest"] == "0xD507b6b299d9FC835a0Df92f718920D13fA49B47":
+                try:
+                    completeMeditation(int(hero["id"]), account, nonce)
+                    nonce += 1
+                except Exception as e:
+                    print("Error:", e)
+            else:
+                hero_quest = quest_core_contract.functions.getHeroQuest(
+                    int(hero["id"])).call()
+                end_time = hero_quest[7]
+                if int(end_time) <= int(time.mktime(datetime.now().timetuple())):
+                    if hero_quest[1] in done_questing:
+                        done_questing[hero_quest[1]].append(int(hero["id"]))
+                    else:
+                        done_questing[hero_quest[1]] = [int(hero["id"])]
+                else:
+                    if hero_quest[1] in questing:
+                        questing[hero_quest[1]].append(int(hero["id"]))
+                    else:
+                        questing[hero_quest[1]] = [int(hero["id"])]
+
+        # Recharging Stamina
+        elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
+            if level_up and (hero["xp"] % 1000 == 0 and hero["xp"] != 0):
+                try:
+                    levelUpHero(int(hero["id"]),
+                                stats, account, nonce)
+                    nonce += 1
+                except Exception as e:
+                    print("Error:", e)
+            else:
+                recharging[hero["profession"]].append(int(hero["id"]))
+
     for profession in done_questing:
         if done_questing[profession]:
             try:
-                claimReward(done_questing[profession],
-                            profession, account, nonce, table)
+                claimReward(done_questing[profession], account, nonce)
                 print(f"Heroes: {done_questing[profession]} claimed reward")
                 nonce += 1
             except Exception as e:
@@ -118,9 +157,10 @@ def checkHeroes(user, override, table):
                     f"error claiming quest with heroes: {done_questing[profession]}, error: {e}")
 
     for profession in ready_to_quest:
-        if ready_to_quest[profession] and not questing[profession]:
+        if ready_to_quest[profession] and not profession in questing:
             try:
-                startQuest(ready_to_quest[profession][0:6], profession, account, nonce)
+                # startQuest(ready_to_quest[profession]
+                # [0: 6], profession, account, nonce)
                 print(
                     f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce += 1
@@ -132,6 +172,5 @@ def checkHeroes(user, override, table):
         "ready to quest": ready_to_quest,
         "questing": questing,
         "done_questing": done_questing,
-        "recharging": recharging,
-        "auction": auction
+        "recharging": recharging
     }
