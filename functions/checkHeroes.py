@@ -7,8 +7,8 @@ from functions.claimReward import claimReward
 from functions.removeFromAuction import removeFromAuction
 from functions.Meditation import levelUpHero, completeMeditation
 
-from functions.Contracts import quest_core_contract
-from functions.provider import w3, get_account
+from functions.Contracts import getQuestCore
+from functions.provider import get_account, get_provider
 
 ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 graph_url = "https://defi-kingdoms-community-api-gateway-co06z8vi.uc.gateway.dev/graphql"
@@ -34,12 +34,13 @@ address_from_quest = {
 }
 
 
-def checkHeroes(user, table):
+def checkHeroes(user, network, table):
     account = get_account(user)
+    w3 = get_provider(network)
     nonce = w3.eth.get_transaction_count(account.address)
     query = """
-        query ($user: String) {
-            heroes(where: {owner: $user}) {
+        query ($user: String, $network: String) {
+            heroes(where: {owner: $user, network: $network}) {
                 id
                 xp
                 level
@@ -53,7 +54,8 @@ def checkHeroes(user, table):
         }
     """
     variables = {
-        "user": user
+        "user": user,
+        "network": network
     }
 
     response = requests.post(
@@ -73,6 +75,9 @@ def checkHeroes(user, table):
         "vitality": []
     }
 
+    if not "data" in response.json(): 
+        print("no Heroes on chain: ", network)
+        return
     for hero in response.json()["data"]["heroes"]:
         hero_setting = table.get_item(
             Key={"heroId_": int(hero["id"]), "owner_": user})
@@ -87,12 +92,12 @@ def checkHeroes(user, table):
             if level_up:
                 stats = {
                     "primaryStat": hero_setting["Item"]["primaryStat_"],
-                    "secondarStat": hero_setting["Item"]["secondaryStat_"],
+                    "secondaryStat": hero_setting["Item"]["secondaryStat_"],
                     "tertiaryStat": hero_setting["Item"]["tertiaryStat_"]
                 }
         if hero["saleAuction"] and hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
             try:
-                removeFromAuction(int(hero["id"]), account, nonce)
+                removeFromAuction(int(hero["id"]), account, nonce, w3)
                 print(f"Hero: {hero['id']} removed from auction")
                 nonce += 1
             except Exception as e:
@@ -114,11 +119,12 @@ def checkHeroes(user, table):
         elif hero["currentQuest"] != ZERO_ADDRESS:
             if hero["currentQuest"] == "0xD507b6b299d9FC835a0Df92f718920D13fA49B47":
                 try:
-                    completeMeditation(int(hero["id"]), account, nonce)
+                    completeMeditation(int(hero["id"]), account, nonce, w3)
                     nonce += 1
                 except Exception as e:
                     print("Error:", e)
             else:
+                quest_core_contract = getQuestCore(w3)
                 hero_quest = quest_core_contract.functions.getHeroQuest(
                     int(hero["id"])).call()
                 end_time = hero_quest[7]
@@ -138,7 +144,7 @@ def checkHeroes(user, table):
             if level_up and (hero["xp"] % 1000 == 0 and hero["xp"] != 0) and hero["level"]<6:
                 try:
                     levelUpHero(int(hero["id"]),
-                                stats, account, nonce)
+                                stats, account, nonce, w3)
                     nonce += 1
                 except Exception as e:
                     print("Error:", e)
@@ -148,7 +154,7 @@ def checkHeroes(user, table):
     for profession in done_questing:
         if done_questing[profession]:
             try:
-                claimReward(done_questing[profession], account, nonce)
+                claimReward(done_questing[profession], account, nonce, w3)
                 print(f"Heroes: {done_questing[profession]} claimed reward")
                 nonce += 1
             except Exception as e:
@@ -159,7 +165,7 @@ def checkHeroes(user, table):
         if ready_to_quest[profession] and not profession in questing:
             try:
                 startQuest(ready_to_quest[profession]
-                    [0: 6], profession, account, nonce)
+                    [0: 6], profession, account, nonce, w3)
                 print(
                     f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce += 1

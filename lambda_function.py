@@ -11,7 +11,12 @@ my_session = boto3.session.Session(
     )
 table = my_session.resource('dynamodb').Table("dfk-autoplayer-heroes")
 
+chains = ["dfk", "kla"]
+
 def handler(event, context):
+    response = {}
     for user in event["users"]:
-        users[user] = checkHeroes(user, table)
-    return users
+        response[user] = []
+        for chain in chains:
+            response[user].append(checkHeroes(user, chain, table))
+    return response

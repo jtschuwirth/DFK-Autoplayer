@@ -12,7 +12,10 @@ user = "0x7C50D01C7Ba0EDE836bDA6daC88A952f325756e3"
     # 7: "Dexterity"
 
 
-response = handler({"users": [user]}, "")
+response = handler({"users":[user]}, "")
 
-for item in response[user]:
-    print(item,": ", response[user][item])
+for chain_result in response[user]:
+    print("-------------")
+    print("             ")
+    for result in chain_result:
+        print(result,": ", chain_result[result])

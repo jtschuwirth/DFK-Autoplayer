@@ -1,7 +1,8 @@
-from functions.Contracts import quest_core_contract
-from functions.provider import w3
+from functions.Contracts import getQuestCore
 
-def claimReward(heroes, account, nonce):
+
+def claimReward(heroes, account, nonce, w3):
+    quest_core_contract = getQuestCore(w3)
     tx = quest_core_contract.functions.completeQuest(heroes[0]).build_transaction({
         "from": account.address,
         'nonce': nonce

@@ -1,9 +1,9 @@
-from functions.Contracts import meditation_contract
-from functions.provider import w3
+from functions.Contracts import getMeditation
 
 ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
-def levelUpHero(hero, hero_data, account, nonce):
+def levelUpHero(hero, hero_data, account, nonce, w3):
+    meditation_contract = getMeditation(w3)
     tx = meditation_contract.functions.startMeditation(
                                 hero, 
                                 hero_data["primaryStat"], 
@@ -17,7 +17,8 @@ def levelUpHero(hero, hero_data, account, nonce):
     signed_tx = w3.eth.account.sign_transaction(tx, account.key)
     w3.eth.send_raw_transaction(signed_tx.rawTransaction)
 
-def completeMeditation(hero, account, nonce):
+def completeMeditation(hero, account, nonce, w3):
+    meditation_contract = getMeditation(w3)
     tx = meditation_contract.functions.completeMeditation(hero).build_transaction({
         "from": account.address,
         'nonce': nonce
