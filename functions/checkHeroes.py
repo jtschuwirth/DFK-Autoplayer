@@ -19,24 +19,25 @@ headers = {
     'User-Agent': 'Mozilla/5.0'
 }
 
-# quest_from_address = {
-#    "0x75912145f5cFEfb980616FA47B2f103210FaAb94": "mining",
-#    "0x407ab39B3675f29A719476af6eb3B9E5d93969E6": "fishing",
-#    "0xAd51199B453075C73FA106aFcAAD59f705EF7872": "foraging",
-#    "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d": "vitality"
-# }
-
 address_from_quest = {
-    "mining": "0x75912145f5cFEfb980616FA47B2f103210FaAb94",
-    "fishing": "0x407ab39B3675f29A719476af6eb3B9E5d93969E6",
-    "foraging": "0xAd51199B453075C73FA106aFcAAD59f705EF7872",
-    "vitality": "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d"
+    "dfk": {
+        "mining": "0x75912145f5cFEfb980616FA47B2f103210FaAb94",
+        "fishing": "0x407ab39B3675f29A719476af6eb3B9E5d93969E6",
+        "foraging": "0xAd51199B453075C73FA106aFcAAD59f705EF7872",
+        "vitality": "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d"
+    },
+    "kla": {
+        "mining": "0x46F036B26870188aD69877621815238D2b81bef1",
+        "fishing": "0x0E7a8b035eF2FA0183a2680458818256424Bd60B",
+        "foraging": "0x54DaD24dDc2cC6E7616438816DE0EeFCad79B625",
+        "vitality": "0x89a60d8B332ce2Dd3bE8b170c6391F98a03a665F"
+    }
 }
 
 
 def checkHeroes(user, network, table):
-    account = get_account(user)
     w3 = get_provider(network)
+    account = get_account(user, w3)
     nonce = w3.eth.get_transaction_count(account.address)
     query = """
         query ($user: String, $network: String) {
@@ -97,7 +98,7 @@ def checkHeroes(user, network, table):
                 }
         if hero["saleAuction"] and hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
             try:
-                removeFromAuction(int(hero["id"]), account, nonce, w3)
+                removeFromAuction(int(hero["id"]), account, nonce, w3, network)
                 print(f"Hero: {hero['id']} removed from auction")
                 nonce += 1
             except Exception as e:
@@ -107,24 +108,24 @@ def checkHeroes(user, network, table):
         # Ready to Quest
         if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple()))+60*200:
             if override:
-                ready_to_quest[address_from_quest[override]].append(hero)
-            elif address_from_quest[hero["profession"]] in ready_to_quest:
-                ready_to_quest[address_from_quest[hero["profession"]]].append(
+                ready_to_quest[address_from_quest[network][override]].append(hero)
+            elif address_from_quest[network][hero["profession"]] in ready_to_quest:
+                ready_to_quest[address_from_quest[network][hero["profession"]]].append(
                     int(hero["id"]))
             else:
-                ready_to_quest[address_from_quest[hero["profession"]]] = [
+                ready_to_quest[address_from_quest[network][hero["profession"]]] = [
                     int(hero["id"])]
 
         # Currently Questing
         elif hero["currentQuest"] != ZERO_ADDRESS:
-            if hero["currentQuest"] == "0xD507b6b299d9FC835a0Df92f718920D13fA49B47":
+            if hero["currentQuest"] == "0xD507b6b299d9FC835a0Df92f718920D13fA49B47" or hero["currentQuest"] == "0xdbEE8C336B06f2d30a6d2bB3817a3Ae0E34f4900":
                 try:
-                    completeMeditation(int(hero["id"]), account, nonce, w3)
+                    completeMeditation(int(hero["id"]), account, nonce, w3, network)
                     nonce += 1
                 except Exception as e:
                     print("Error:", e)
             else:
-                quest_core_contract = getQuestCore(w3)
+                quest_core_contract = getQuestCore(w3, network)
                 hero_quest = quest_core_contract.functions.getHeroQuest(
                     int(hero["id"])).call()
                 end_time = hero_quest[7]
@@ -144,7 +145,7 @@ def checkHeroes(user, network, table):
             if level_up and (hero["xp"] % 1000 == 0 and hero["xp"] != 0) and hero["level"]<6:
                 try:
                     levelUpHero(int(hero["id"]),
-                                stats, account, nonce, w3)
+                                stats, account, nonce, w3, network)
                     nonce += 1
                 except Exception as e:
                     print("Error:", e)
@@ -154,7 +155,7 @@ def checkHeroes(user, network, table):
     for profession in done_questing:
         if done_questing[profession]:
             try:
-                claimReward(done_questing[profession], account, nonce, w3)
+                claimReward(done_questing[profession], account, nonce, w3, network)
                 print(f"Heroes: {done_questing[profession]} claimed reward")
                 nonce += 1
             except Exception as e:
@@ -165,7 +166,7 @@ def checkHeroes(user, network, table):
         if ready_to_quest[profession] and not profession in questing:
             try:
                 startQuest(ready_to_quest[profession]
-                    [0: 6], profession, account, nonce, w3)
+                    [0: 6], profession, account, nonce, w3, network)
                 print(
                     f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce += 1
