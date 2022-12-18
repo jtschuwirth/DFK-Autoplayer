@@ -34,6 +34,11 @@ address_from_quest = {
     }
 }
 
+meditation_quests = [
+    "0xD507b6b299d9FC835a0Df92f718920D13fA49B47",
+    "0xdbEE8C336B06f2d30a6d2bB3817a3Ae0E34f4900"
+]
+
 
 def checkHeroes(user, network, table):
     w3 = get_provider(network)
@@ -108,7 +113,10 @@ def checkHeroes(user, network, table):
         # Ready to Quest
         if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple()))+60*200:
             if override:
-                ready_to_quest[address_from_quest[network][override]].append(hero)
+                try:
+                    ready_to_quest[address_from_quest[network][override]].append(hero)
+                except:
+                    continue
             elif address_from_quest[network][hero["profession"]] in ready_to_quest:
                 ready_to_quest[address_from_quest[network][hero["profession"]]].append(
                     int(hero["id"]))
@@ -118,7 +126,7 @@ def checkHeroes(user, network, table):
 
         # Currently Questing
         elif hero["currentQuest"] != ZERO_ADDRESS:
-            if hero["currentQuest"] == "0xD507b6b299d9FC835a0Df92f718920D13fA49B47" or hero["currentQuest"] == "0xdbEE8C336B06f2d30a6d2bB3817a3Ae0E34f4900":
+            if hero["currentQuest"] in meditation_quests:
                 try:
                     completeMeditation(int(hero["id"]), account, nonce, w3, network)
                     nonce += 1
