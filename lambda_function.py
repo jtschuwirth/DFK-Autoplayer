@@ -11,7 +11,10 @@ my_session = boto3.session.Session(
     )
 table = my_session.resource('dynamodb').Table("dfk-autoplayer-heroes")
 
-chains = ["dfk", "kla"]
+chains = [
+    "dfk", 
+    #"kla"
+]
 
 def handler(event, context):
     response = {}

@@ -24,12 +24,14 @@ address_from_quest = {
         "mining": "0x75912145f5cFEfb980616FA47B2f103210FaAb94",
         "fishing": "0x407ab39B3675f29A719476af6eb3B9E5d93969E6",
         "foraging": "0xAd51199B453075C73FA106aFcAAD59f705EF7872",
+        "gardening": "0xC4839Fb9A5466878168EaE3fD58c647B71475b61",
         "vitality": "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d"
     },
     "kla": {
         "mining": "0x46F036B26870188aD69877621815238D2b81bef1",
         "fishing": "0x0E7a8b035eF2FA0183a2680458818256424Bd60B",
         "foraging": "0x54DaD24dDc2cC6E7616438816DE0EeFCad79B625",
+        "gardening": "0x3837612f3A14C92Da8E0186AB398A753fe169dc1",
         "vitality": "0x89a60d8B332ce2Dd3bE8b170c6391F98a03a665F"
     }
 }
@@ -88,20 +90,13 @@ def checkHeroes(user, network, table):
         hero_setting = table.get_item(
             Key={"heroId_": int(hero["id"]), "owner_": user})
         override = False
-        level_up = False
-        stats = {}
+        sell = False
         if "Item" in hero_setting:
             if "override_" in hero_setting["Item"]:
                 override = hero_setting["Item"]["override_"]
-            if "levelUp_" in hero_setting["Item"]:
-                level_up = hero_setting["Item"]["levelUp_"]
-            if level_up:
-                stats = {
-                    "primaryStat": hero_setting["Item"]["primaryStat_"],
-                    "secondaryStat": hero_setting["Item"]["secondaryStat_"],
-                    "tertiaryStat": hero_setting["Item"]["tertiaryStat_"]
-                }
-        if hero["saleAuction"] and hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
+            if "sell_" in hero_setting["Item"]:
+                sell = hero_setting["Item"]["sell_"]
+        if not sell and hero["saleAuction"] and hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
             try:
                 removeFromAuction(int(hero["id"]), account, nonce, w3, network)
                 print(f"Hero: {hero['id']} removed from auction")
@@ -110,8 +105,22 @@ def checkHeroes(user, network, table):
                 print(
                     f"error canceling auction with hero: {hero['id']}, error: {e}")
 
-        # Ready to Quest
-        if hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple()))+60*200:
+        # Ready to Quest Miner or Gardener
+        if (hero["profession"]=="mining" or hero["profession"] == "gardening") and hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple()))+60*200:
+            if override:
+                try:
+                    ready_to_quest[address_from_quest[network][override]].append(hero)
+                except:
+                    continue
+            elif address_from_quest[network][hero["profession"]] in ready_to_quest:
+                ready_to_quest[address_from_quest[network][hero["profession"]]].append(
+                    int(hero["id"]))
+            else:
+                ready_to_quest[address_from_quest[network][hero["profession"]]] = [
+                    int(hero["id"])]
+
+        # Ready to Quest Fisher or Forager
+        elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
             if override:
                 try:
                     ready_to_quest[address_from_quest[network][override]].append(hero)
@@ -150,15 +159,7 @@ def checkHeroes(user, network, table):
 
         # Recharging Stamina
         elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
-            if level_up and (hero["xp"] % 1000 == 0 and hero["xp"] != 0) and hero["level"]<6:
-                try:
-                    levelUpHero(int(hero["id"]),
-                                stats, account, nonce, w3, network)
-                    nonce += 1
-                except Exception as e:
-                    print("Error:", e)
-            else:
-                recharging[hero["profession"]].append(int(hero["id"]))
+            recharging[hero["profession"]].append(int(hero["id"]))
 
     for profession in done_questing:
         if done_questing[profession]:
@@ -173,10 +174,16 @@ def checkHeroes(user, network, table):
     for profession in ready_to_quest:
         if ready_to_quest[profession] and not profession in questing:
             try:
-                startQuest(ready_to_quest[profession]
-                    [0: 6], profession, account, nonce, w3, network)
-                print(
-                    f"Heroes: {ready_to_quest[profession][0:6]} started quest")
+                if profession == address_from_quest[network]["gardening"]:
+                    startQuest(ready_to_quest[profession]
+                        [0: 2], profession, account, nonce, w3, network)
+                    print(
+                        f"Heroes: {ready_to_quest[profession][0:2]} started quest")
+                else:
+                    startQuest(ready_to_quest[profession]
+                        [0: 6], profession, account, nonce, w3, network)
+                    print(
+                        f"Heroes: {ready_to_quest[profession][0:6]} started quest")
                 nonce += 1
             except Exception as e:
                 print(
