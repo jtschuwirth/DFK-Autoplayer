@@ -4,8 +4,6 @@ import time
 
 from functions.startQuest import startQuest
 from functions.claimReward import claimReward
-from functions.removeFromAuction import removeFromAuction
-from functions.Meditation import levelUpHero, completeMeditation
 
 from functions.Contracts import getQuestCore
 from functions.provider import get_account, get_provider
@@ -24,15 +22,13 @@ address_from_quest = {
         "mining": "0x75912145f5cFEfb980616FA47B2f103210FaAb94",
         "fishing": "0x407ab39B3675f29A719476af6eb3B9E5d93969E6",
         "foraging": "0xAd51199B453075C73FA106aFcAAD59f705EF7872",
-        "gardening": "0xC4839Fb9A5466878168EaE3fD58c647B71475b61",
-        "vitality": "0xE3edf52D33F2BB05DBdA5BA73903E27a9B9b7e9d"
+        "gardening": "0xC4839Fb9A5466878168EaE3fD58c647B71475b61"
     },
     "kla": {
         "mining": "0x46F036B26870188aD69877621815238D2b81bef1",
         "fishing": "0x0E7a8b035eF2FA0183a2680458818256424Bd60B",
         "foraging": "0x54DaD24dDc2cC6E7616438816DE0EeFCad79B625",
-        "gardening": "0x3837612f3A14C92Da8E0186AB398A753fe169dc1",
-        "vitality": "0x89a60d8B332ce2Dd3bE8b170c6391F98a03a665F"
+        "gardening": "0x3837612f3A14C92Da8E0186AB398A753fe169dc1"
     }
 }
 
@@ -42,7 +38,7 @@ meditation_quests = [
 ]
 
 
-def checkHeroes(user, network, table):
+def checkHeroes(user, network):
     w3 = get_provider(network)
     account = get_account(user, w3)
     nonce = w3.eth.get_transaction_count(account.address)
@@ -83,36 +79,13 @@ def checkHeroes(user, network, table):
         "vitality": []
     }
 
-    if not "data" in response.json(): 
-        print("no Heroes on chain: ", network)
+    if not "data" in response.json() or len(response.json()["data"]["heroes"]) == 0: 
+        print("No Heroes on chain: ", network)
         return
     for hero in response.json()["data"]["heroes"]:
-        hero_setting = table.get_item(
-            Key={"heroId_": int(hero["id"]), "owner_": user})
-        override = False
-        sell = False
-        if "Item" in hero_setting:
-            if "override_" in hero_setting["Item"]:
-                override = hero_setting["Item"]["override_"]
-            if "sell_" in hero_setting["Item"]:
-                sell = hero_setting["Item"]["sell_"]
-        if not sell and hero["saleAuction"] and hero["staminaFullAt"] <= int(time.mktime(datetime.now().timetuple()))+30*60:
-            try:
-                removeFromAuction(int(hero["id"]), account, nonce, w3, network)
-                print(f"Hero: {hero['id']} removed from auction")
-                nonce += 1
-            except Exception as e:
-                print(
-                    f"error canceling auction with hero: {hero['id']}, error: {e}")
-
         # Ready to Quest Miner or Gardener
         if (hero["profession"]=="mining" or hero["profession"] == "gardening") and hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple()))+60*200:
-            if override:
-                try:
-                    ready_to_quest[address_from_quest[network][override]].append(hero)
-                except:
-                    continue
-            elif address_from_quest[network][hero["profession"]] in ready_to_quest:
+            if address_from_quest[network][hero["profession"]] in ready_to_quest:
                 ready_to_quest[address_from_quest[network][hero["profession"]]].append(
                     int(hero["id"]))
             else:
@@ -121,12 +94,7 @@ def checkHeroes(user, network, table):
 
         # Ready to Quest Fisher or Forager
         elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) <= int(time.mktime(datetime.now().timetuple())):
-            if override:
-                try:
-                    ready_to_quest[address_from_quest[network][override]].append(hero)
-                except:
-                    continue
-            elif address_from_quest[network][hero["profession"]] in ready_to_quest:
+            if address_from_quest[network][hero["profession"]] in ready_to_quest:
                 ready_to_quest[address_from_quest[network][hero["profession"]]].append(
                     int(hero["id"]))
             else:
@@ -135,27 +103,20 @@ def checkHeroes(user, network, table):
 
         # Currently Questing
         elif hero["currentQuest"] != ZERO_ADDRESS:
-            if hero["currentQuest"] in meditation_quests:
-                try:
-                    completeMeditation(int(hero["id"]), account, nonce, w3, network)
-                    nonce += 1
-                except Exception as e:
-                    print("Error:", e)
-            else:
-                quest_core_contract = getQuestCore(w3, network)
-                hero_quest = quest_core_contract.functions.getHeroQuest(
-                    int(hero["id"])).call()
-                end_time = hero_quest[7]
-                if int(end_time) <= int(time.mktime(datetime.now().timetuple())):
-                    if hero_quest[1] in done_questing:
-                        done_questing[hero_quest[1]].append(int(hero["id"]))
-                    else:
-                        done_questing[hero_quest[1]] = [int(hero["id"])]
+            quest_core_contract = getQuestCore(w3, network)
+            hero_quest = quest_core_contract.functions.getHeroQuest(
+                int(hero["id"])).call()
+            end_time = hero_quest[7]
+            if int(end_time) <= int(time.mktime(datetime.now().timetuple())):
+                if hero_quest[1] in done_questing:
+                    done_questing[hero_quest[1]].append(int(hero["id"]))
                 else:
-                    if hero_quest[1] in questing:
-                        questing[hero_quest[1]].append(int(hero["id"]))
-                    else:
-                        questing[hero_quest[1]] = [int(hero["id"])]
+                    done_questing[hero_quest[1]] = [int(hero["id"])]
+            else:
+                if hero_quest[1] in questing:
+                    questing[hero_quest[1]].append(int(hero["id"]))
+                else:
+                    questing[hero_quest[1]] = [int(hero["id"])]
 
         # Recharging Stamina
         elif hero["currentQuest"] == ZERO_ADDRESS and int(hero["staminaFullAt"]) >= int(time.mktime(datetime.now().timetuple())):
